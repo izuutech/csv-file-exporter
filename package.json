@@ -1,0 +1,17 @@
+{
+  "name": "csv-exporter",
+  "version": "1.0.0",
+  "description": "- Useful for when you have a csv contacts file and you want to display only the phone numbers so you can copy and paste elsewhere without other fields",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon server",
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^4.21.2"
+  }
+}

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Extract and Clean Phone Numbers from CSV</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+  </head>
+  <body>
+    <h1>Extract and Clean Phone Numbers from CSV</h1>
+
+    <!-- File input for CSV -->
+    <input type="file" id="csvFile" accept=".csv" />
+
+    <h2>Phone Numbers</h2>
+    <div id="phoneNumbers"></div>
+
+    <script>
+      // Regular expression to match phone numbers (e.g., 08129281076, (081) 2928-1076, +234 812 345 6789)
+      const phoneNumberPattern =
+        /(\+?\d{1,2}\s?)?(\(?\d{3}\)?[\s\-]?)?\d{3}[\s\-]?\d{4}/;
+
+      // Handle CSV file upload
+      document
+        .getElementById("csvFile")
+        .addEventListener("change", function (event) {
+          const file = event.target.files[0];
+
+          if (!file) {
+            alert("Please select a file.");
+            return;
+          }
+
+          // Use FileReader to read the file
+          const reader = new FileReader();
+
+          reader.onload = function (e) {
+            const content = e.target.result;
+
+            // Parse CSV file using PapaParse
+            Papa.parse(content, {
+              complete: function (results) {
+                const data = results.data;
+
+                // Iterate through CSV rows and find phone numbers
+                let phoneNumbers = [];
+
+                data.forEach((row) => {
+                  row.forEach((cell) => {
+                    if (phoneNumberPattern.test(cell)) {
+                      // Split numbers by commas (if multiple numbers are in the same cell)
+                      const numbers = cell.split(",").map((num) => num.trim());
+
+                      // Clean each phone number by removing non-numeric characters except '+'
+                      numbers.forEach((number) => {
+                        let cleanedPhoneNumber = number
+                          .replace(/[^\d+]/g, "")
+                          .trim();
+
+                        // Handle case where phone number starts with 0+234 (remove +234)
+                        if (cleanedPhoneNumber.startsWith("0+234")) {
+                          cleanedPhoneNumber = cleanedPhoneNumber.replace(
+                            "0+234",
+                            "0"
+                          );
+                        }
+
+                        // Handle cases where there are two occurrences of +234 (e.g., +2348123456789+234)
+                        if (cleanedPhoneNumber.startsWith("+234")) {
+                          cleanedPhoneNumber = cleanedPhoneNumber.slice(4);
+                          phoneNumbers.push(
+                            "0" + cleanedPhoneNumber.slice(0, 10)
+                          ); // First part
+                          phoneNumbers.push("0" + cleanedPhoneNumber.slice(10)); // Second part
+                        } else {
+                          // Handle numbers starting with 0 and longer than 11 digits
+                          if (
+                            cleanedPhoneNumber.startsWith("0") &&
+                            cleanedPhoneNumber.length > 11
+                          ) {
+                            let firstPart = cleanedPhoneNumber.slice(0, 11);
+                            let secondPart = cleanedPhoneNumber.slice(11);
+                            phoneNumbers.push(firstPart); // First 11 digits
+                            phoneNumbers.push(secondPart); // Remaining digits
+                          } else {
+                            // Replace +234 or 234 with 0
+                            cleanedPhoneNumber = cleanedPhoneNumber.replace(
+                              /^(\+234|234)/,
+                              "0"
+                            );
+
+                            // Push cleaned number to the array if it is valid
+                            if (
+                              cleanedPhoneNumber.length >= 5 &&
+                              cleanedPhoneNumber !== "0"
+                            ) {
+                              // Ensure phone number is at least 5 digits and not just '0'
+                              phoneNumbers.push(cleanedPhoneNumber);
+                            }
+                          }
+                        }
+                      });
+                    }
+                  });
+                });
+
+                // Filter out any phone numbers that are just '0'
+                phoneNumbers = phoneNumbers.filter((num) => num !== "0");
+
+                // Final cleaning: remove +234 if the number starts with 0+234
+                phoneNumbers = phoneNumbers.map((num) => {
+                  if (num.startsWith("0+234")) {
+                    return num.replace("0+234", "0");
+                  }
+                  return num;
+                });
+
+                // Remove numbers that are longer than 11 digits or do not start with 0, 8, 9, or 7
+                phoneNumbers = phoneNumbers.filter((num) => {
+                  return num.length <= 11 && /^[0897]/.test(num);
+                });
+
+                // Display cleaned phone numbers
+                document.getElementById("phoneNumbers").innerHTML =
+                  phoneNumbers.join(", ");
+              },
+            });
+          };
+
+          reader.readAsText(file); // Read the file as text
+        });
+    </script>
+  </body>
+</html>
